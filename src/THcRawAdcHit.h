@@ -18,6 +18,13 @@ public:
   void SetRefTime( Int_t refTime );
   void SetSampThreshold( Double_t thres );
   void SetSampNSAT( Int_t nsat );
+  // Samp gate timeout (proposal G1): if the last-4 pedestal was chosen and the search gate has stayed
+  // shut for >= gmax samples without a pulse, fall back to the first-4 pedestal and restart the search.
+  // gmax < 0 (default) = off = previous behaviour. Not reset by Clear(), like the Samp threshold.
+  void SetSampGateMax( Int_t gmax );
+  // Optional flatness guard for that fallback: switch only if max-min of raw samples 0..NPED-1
+  // is <= flatmax (ADC counts). flatmax < 0 (default) = guard off.
+  void SetSampPedFlatMax( Int_t flatmax );
   void SetRefDiffTime( Int_t refDiffTime );
   void SetDataTimePedestalPeak( Int_t data, Int_t time, Int_t pedestal,
                                 Int_t peak );
@@ -86,6 +93,8 @@ protected:
   Double_t fPeakPedestalRatio;
   Double_t fSubsampleToTimeFactor;
   Double_t fSampThreshold;
+  Int_t fSampGateMax;      // Samp gate timeout in samples (<0: off)
+  Int_t fSampPedFlatMax;   // max spread of the first-NPED raw samples for the fallback (<0: no guard)
 
   Int_t fNSA;
   Int_t fNSAT;

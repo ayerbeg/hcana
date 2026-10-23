@@ -196,6 +196,8 @@ THcRawAdcHit::THcRawAdcHit()
   , fPeakPedestalRatio(1.0*fNPeakSamples/fNPedestalSamples)
   , fSubsampleToTimeFactor(0.0625)
   , fSampThreshold(10.)
+  , fSampGateMax(-1)
+  , fSampPedFlatMax(-1)
   , fNSA(-1)
   , fNSAT(-1)
   , fNSB(-1)
@@ -298,6 +300,14 @@ void THcRawAdcHit::SetSampNSAT(Int_t nsat) {
   fNSAT = nsat;
 }
 
+void THcRawAdcHit::SetSampGateMax(Int_t gmax) {
+  fSampGateMax = gmax;
+}
+
+void THcRawAdcHit::SetSampPedFlatMax(Int_t flatmax) {
+  fSampPedFlatMax = flatmax;
+}
+
 
 void THcRawAdcHit::SetSample(Int_t data) {
   if (fNSamples >= fMaxNSamples) {
@@ -340,15 +350,38 @@ void THcRawAdcHit::SetSampIntTimePedestalPeak() {
   } else {
     //
     Bool_t CheckSampBelowThres = kFALSE;
+    Bool_t usedLast4 = kFALSE;
+    const Int_t gateStart = NS;
      Int_t LastFourSampPed = GetIntegral(fNSamples - fNPedestalSamples, fNSamples - 1);
     if ( LastFourSampPed < fSampPed) {
            fSampPed= LastFourSampPed;
            CheckSampBelowThres = kTRUE;
+           usedLast4 = kTRUE;
     }
     while( NS < int(fNSamples) && fNSampPulses < fMaxNPulses ) {
       // GetSample(NS) Pedestal subtracted sample value (mV)
       if( CheckSampBelowThres ) { // find sample below threshold to start search
         if( GetSample(NS) < fSampThreshold ) CheckSampBelowThres = kFALSE;
+        else if( usedLast4 && fSampGateMax >= 0 && fNSampPulses == 0 && NS - gateStart >= fSampGateMax ) {
+          // Gate shut for fSampGateMax samples with the last-4 pedestal: judge that choice wrong
+          // (e.g. undershoot after a late pulse), unless the first-4 block is not flat (guard).
+          usedLast4 = kFALSE;  // decide only once
+          Bool_t flat = kTRUE;
+          if( fSampPedFlatMax >= 0 ) {
+            Int_t smin = fSample[0], smax = fSample[0];
+            for( Int_t i = 1; i < fNPedestalSamples; ++i ) {
+              smin = TMath::Min(smin, fSample[i]);
+              smax = TMath::Max(smax, fSample[i]);
+            }
+            flat = (smax - smin <= fSampPedFlatMax);
+          }
+          if( flat ) {
+            fSampPed = GetIntegral(0, fNPedestalSamples - 1);
+            CheckSampBelowThres = kFALSE;
+            NS = fNPedestalSamples - 1;  // restart the search with the first-4 pedestal
+            continue;
+          }
+        }
       } else {
         Int_t ns_found = 0;
         for( Int_t nt = NS; nt < TMath::Min((NS + fNSAT), int(fNSamples)); nt++ ) {
