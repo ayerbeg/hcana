@@ -207,6 +207,7 @@ THcRawAdcHit::THcRawAdcHit()
   , fSampPulseInt()
   , fSampPulseAmp()
   , fSampPulseTime()
+  , fSampPulsePeakPedRatio()
   , fSample()
   , fRefTime(0)
   , fRefDiffTime(0)
@@ -230,6 +231,7 @@ THcRawAdcHit& THcRawAdcHit::operator=(const THcRawAdcHit& right) {
       fSampPulseInt[i]  = right.fSampPulseInt[i];
       fSampPulseAmp[i]  = right.fSampPulseAmp[i];
       fSampPulseTime[i] = right.fSampPulseTime[i];
+      fSampPulsePeakPedRatio[i] = right.fSampPulsePeakPedRatio[i];
    }
     for (UInt_t i=0; i<fMaxNSamples; ++i) {
       fSample[i] = right.fSample[i];
@@ -333,6 +335,7 @@ void THcRawAdcHit::SetSampIntTimePedestalPeak() {
                                               TMath::Min((NS + fNSA - 1), int(fNSamples - 1)));
     fNPeakSamples = TMath::Min((NS + fNSA - 1), int(fNSamples - 1)) - TMath::Max(NS - fNSB, 0) + 1;
     fPeakPedestalRatio = 1.0 * fNPeakSamples / fNPedestalSamples;
+    fSampPulsePeakPedRatio[fNSampPulses] = fPeakPedestalRatio;
     fSampPulseAmp[fNSampPulses] = GetSampleRaw(NS);
     fSampPulseTime[fNSampPulses] = 64 * NS;
     fNSampPulses = 1;
@@ -359,6 +362,7 @@ void THcRawAdcHit::SetSampIntTimePedestalPeak() {
                                                     TMath::Min((NS + fNSA - 1), int(fNSamples - 1)));
           fNPeakSamples = TMath::Min((NS + fNSA - 1), int(fNSamples - 1)) - TMath::Max(NS - fNSB, 0) + 1;
           fPeakPedestalRatio = 1.0 * fNPeakSamples / fNPedestalSamples;
+          fSampPulsePeakPedRatio[fNSampPulses] = fPeakPedestalRatio;
           fSampPulseAmp[fNSampPulses] = 0;
           fSampPulseTime[fNSampPulses] = 0;
           Int_t PeakBin = 0;

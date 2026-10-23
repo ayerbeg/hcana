@@ -24,6 +24,8 @@ public:
 
   Int_t GetRawData( UInt_t iPulse = 0 ) const;
   Double_t GetF250_PeakPedestalRatio() const { return fPeakPedestalRatio; }
+  // Peak/pedestal sample-count ratio of Samp pulse i (its own integration window / NPED)
+  Double_t GetSampPulsePeakPedestalRatio( UInt_t iPulse = 0 ) const { return fSampPulsePeakPedRatio[iPulse]; }
   Int_t GetF250_NPedestalSamples() const { return fNPedestalSamples; }
   Int_t GetF250_NSA() const { return fNSA; }
   Int_t GetF250_NSB() const { return fNSB; }
@@ -99,6 +101,7 @@ protected:
   Int_t fSampPulseInt[fMaxNPulses];
   Int_t fSampPulseAmp[fMaxNPulses];
   Int_t fSampPulseTime[fMaxNPulses];
+  Double_t fSampPulsePeakPedRatio[fMaxNPulses]; // per-pulse window length / NPED
   Int_t fSample[fMaxNSamples];
   Int_t fRefTime;
   Int_t fRefDiffTime;
@@ -180,7 +183,8 @@ Double_t THcRawAdcHit::GetPulseInt( UInt_t iPulse ) const {
 
 inline
 Double_t THcRawAdcHit::GetSampPulseInt( UInt_t iPulse ) const {
-  return (static_cast<Double_t>(fSampPulseInt[iPulse]) - static_cast<Double_t>(fSampPed) * fPeakPedestalRatio) *
+  return (static_cast<Double_t>(fSampPulseInt[iPulse]) -
+          static_cast<Double_t>(fSampPed) * fSampPulsePeakPedRatio[iPulse]) *
          GetAdcTopC();
 }
 
