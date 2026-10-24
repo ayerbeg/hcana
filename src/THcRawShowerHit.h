@@ -18,6 +18,7 @@ class THcRawShowerHit : public THcRawHit {
 
     virtual void SetData(Int_t signal, Int_t data);
     virtual void SetSample(Int_t signal, Int_t data);
+    virtual void SetFwPulseWindow(Int_t signal, Int_t timeRaw, Int_t tcOffset);
     virtual void SetDataTimePedestalPeak(
       Int_t signal, Int_t data, Int_t time, Int_t pedestal, Int_t peak
     );

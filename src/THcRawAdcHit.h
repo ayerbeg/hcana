@@ -24,6 +24,14 @@ public:
 
   Int_t GetRawData( UInt_t iPulse = 0 ) const;
   Double_t GetF250_PeakPedestalRatio() const { return fPeakPedestalRatio; }
+  // Firmware pulse window (proposal 01, opt-in via THcHitList "fadc_fw_window_mode"):
+  // per-pulse Nsub/NPED, truncation flag (0 full, 1 clipped at the readout edge, -1 unknown) and
+  // source (-1 legacy: GetPulseInt uses fPeakPedestalRatio; 0 nominal (NSA+NSB)/NPED; 1 exact window
+  // match to the raw samples; 2 estimate from the pulse time and the readout length)
+  Double_t GetPulsePeakPedestalRatio( UInt_t iPulse = 0 ) const { return fPulsePeakPedRatio[iPulse]; }
+  Int_t GetPulseWinTrunc( UInt_t iPulse = 0 ) const { return fPulseWinTrunc[iPulse]; }
+  Int_t GetPulseWinSource( UInt_t iPulse = 0 ) const { return fPulseWinSource[iPulse]; }
+  void SetFwPulseWindow( Int_t timeRaw, Int_t tcOffset );  // applies to the last pulse added
   Int_t GetF250_NPedestalSamples() const { return fNPedestalSamples; }
   Int_t GetF250_NSA() const { return fNSA; }
   Int_t GetF250_NSB() const { return fNSB; }
@@ -96,6 +104,9 @@ protected:
   Int_t fPulseInt[fMaxNPulses];
   Int_t fPulseAmp[fMaxNPulses];
   Int_t fPulseTime[fMaxNPulses];
+  Double_t fPulsePeakPedRatio[fMaxNPulses]; // firmware pulse window length / NPED (proposal 01)
+  Int_t fPulseWinTrunc[fMaxNPulses];        // 0 full window, 1 clipped by the readout, -1 unknown
+  Int_t fPulseWinSource[fMaxNPulses];       // -1 legacy, 0 nominal, 1 exact sample match, 2 time estimate
   Int_t fSampPulseInt[fMaxNPulses];
   Int_t fSampPulseAmp[fMaxNPulses];
   Int_t fSampPulseTime[fMaxNPulses];
@@ -175,7 +186,8 @@ Double_t THcRawAdcHit::GetSampPed() const {
 
 inline
 Double_t THcRawAdcHit::GetPulseInt( UInt_t iPulse ) const {
-  return (static_cast<Double_t>(fPulseInt[iPulse]) - static_cast<Double_t>(fPed) * fPeakPedestalRatio) * GetAdcTopC();
+  const Double_t ratio = (fPulseWinSource[iPulse] >= 0) ? fPulsePeakPedRatio[iPulse] : fPeakPedestalRatio;
+  return (static_cast<Double_t>(fPulseInt[iPulse]) - static_cast<Double_t>(fPed) * ratio) * GetAdcTopC();
 }
 
 inline

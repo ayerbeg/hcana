@@ -42,6 +42,8 @@ THcHitList::THcHitList()
   , fNSA(-1)
   , fNSB(-1)
   , fNPED(-1)
+  , fFwWinMode(0)
+  , fFwTCOffset(0)
   , fNTDCRef_miss(0)
   , fNADCRef_miss(0)
   , fMap(nullptr)
@@ -84,6 +86,21 @@ void THcHitList::InitHitList(THaDetMap* detmap,
 			     Int_t tdcref_cut, Int_t adcref_cut) {
   cout << "InitHitList: " << hitclass << " RefTimeCuts: " << tdcref_cut << " " << adcref_cut << endl;
   fRawHitList = new TClonesArray(hitclass, maxhits);
+
+  // Firmware pulse window per pulse (opt-in). Global, optional DB parameters.
+  fFwWinMode = 0;
+  fFwTCOffset = 0;
+  if( gHcParms ) {
+    DBRequest fwlist[] = {
+      {"fadc_fw_window_mode", &fFwWinMode,  kInt, 0, 1},
+      {"fadc_fw_tc_offset",   &fFwTCOffset, kInt, 0, 1},
+      {nullptr}
+    };
+    gHcParms->LoadParmValues(fwlist, "");
+  }
+  if( fFwWinMode != 0 )
+    cout << "InitHitList: " << hitclass << " firmware pulse window mode " << fFwWinMode
+         << ", TC offset " << fFwTCOffset << endl;
   fRawHitClass = fRawHitList->GetClass();
   fNMaxRawHits = maxhits;
   fNRawHits = 0;
@@ -542,6 +559,9 @@ Int_t THcHitList::DecodeToHitList( const THaEvData& evdata, Bool_t suppresswarni
               evdata.GetData(Decoder::kPulseTime, d->crate, d->slot, chan, ipulse) + 64 * timeshift,
               evdata.GetData(Decoder::kPulsePedestal, d->crate, d->slot, chan, ipulse),
               evdata.GetData(Decoder::kPulsePeak, d->crate, d->slot, chan, ipulse));
+          if( fFwWinMode == 1 )  // raw pulse time, without the trigger time shift
+            rawhit->SetFwPulseWindow(signal,
+                evdata.GetData(Decoder::kPulseTime, d->crate, d->slot, chan, ipulse), fFwTCOffset);
 	}
         if( nsamples > 0 ) {
           rawhit->SetSampIntTimePedestalPeak(signal);

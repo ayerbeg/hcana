@@ -253,3 +253,14 @@ void THcRawHodoHit::SetF250Params(Int_t NSA, Int_t NSB, Int_t NPED) {
 
 
 ClassImp(THcRawHodoHit)
+
+void THcRawHodoHit::SetFwPulseWindow(Int_t signal, Int_t timeRaw, Int_t tcOffset) {
+  if (0 <= signal && signal < fNAdcSignals) {
+    fAdcHits[signal].SetFwPulseWindow(timeRaw, tcOffset);
+  }
+  else {
+    throw std::out_of_range(
+      "`THcRawHodoHit::SetFwPulseWindow`: only signals `0` and `1` available!"
+    );
+  }
+}

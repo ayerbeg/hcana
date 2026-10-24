@@ -29,6 +29,7 @@ public:
   virtual void SetSample(Int_t signal, Int_t data) {};
   virtual void SetSampThreshold(Int_t signal, Double_t thres) {};
   virtual void SetSampIntTimePedestalPeak(Int_t signal) {};
+  virtual void SetFwPulseWindow(Int_t signal, Int_t timeRaw, Int_t tcOffset) {};
   virtual void SetDataTimePedestalPeak(Int_t signal, Int_t data,
 				       Int_t time, Int_t pedestal, Int_t peak) {};
   virtual Int_t GetData(Int_t signal) {return 0;}; /* Ref time subtracted */

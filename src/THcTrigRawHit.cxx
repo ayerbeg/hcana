@@ -321,3 +321,14 @@ void THcTrigRawHit::SetF250Params(Int_t NSA, Int_t NSB, Int_t NPED) {
 
 
 ClassImp(THcTrigRawHit)
+
+void THcTrigRawHit::SetFwPulseWindow(Int_t signal, Int_t timeRaw, Int_t tcOffset) {
+  if (0 <= signal && signal < fNAdcSignals) {
+    fAdcHits[signal].SetFwPulseWindow(timeRaw, tcOffset);
+  }
+  else {
+    throw std::out_of_range(
+      "`THcTrigRawHit::SetFwPulseWindow`: only signal `0` available!"
+    );
+  }
+}

@@ -204,6 +204,9 @@ THcRawAdcHit::THcRawAdcHit()
   , fPulseInt()
   , fPulseAmp()
   , fPulseTime()
+  , fPulsePeakPedRatio()
+  , fPulseWinTrunc()
+  , fPulseWinSource()
   , fSampPulseInt()
   , fSampPulseAmp()
   , fSampPulseTime()
@@ -227,6 +230,9 @@ THcRawAdcHit& THcRawAdcHit::operator=(const THcRawAdcHit& right) {
       fPulseInt[i]  = right.fPulseInt[i];
       fPulseAmp[i]  = right.fPulseAmp[i];
       fPulseTime[i] = right.fPulseTime[i];
+      fPulsePeakPedRatio[i] = right.fPulsePeakPedRatio[i];
+      fPulseWinTrunc[i] = right.fPulseWinTrunc[i];
+      fPulseWinSource[i] = right.fPulseWinSource[i];
       fSampPulseInt[i]  = right.fSampPulseInt[i];
       fSampPulseAmp[i]  = right.fSampPulseAmp[i];
       fSampPulseTime[i] = right.fSampPulseTime[i];
@@ -277,6 +283,9 @@ void THcRawAdcHit::SetData(Int_t data) {
     );
   }
   fPulseInt[fNPulses] = data;
+  fPulsePeakPedRatio[fNPulses] = fPeakPedestalRatio;  // legacy until SetFwPulseWindow()
+  fPulseWinTrunc[fNPulses] = -1;
+  fPulseWinSource[fNPulses] = -1;
   ++fNPulses;
 }
 
@@ -418,7 +427,50 @@ void THcRawAdcHit::SetDataTimePedestalPeak( Int_t data, Int_t time,
   fPed = pedestal;
   fPulseAmp[fNPulses] = peak;
   fHasMulti = kTRUE;
+  fPulsePeakPedRatio[fNPulses] = fPeakPedestalRatio;  // legacy until SetFwPulseWindow()
+  fPulseWinTrunc[fNPulses] = -1;
+  fPulseWinSource[fNPulses] = -1;
   ++fNPulses;
+}
+
+void THcRawAdcHit::SetFwPulseWindow( Int_t timeRaw, Int_t tcOffset ) {
+  // Proposal 01 (A + T5, T3 fallback, flag). Called for the last firmware pulse added, after the samples
+  // were loaded and before any Samp search. Freezes the nominal window (NSA+NSB)/NPED, then, if samples
+  // exist, looks for the window [TC-NSB, TC+NSA-1] clipped to the readout whose raw-sample sum equals
+  // the firmware IntRaw (T5, TC within +-kSearch of the estimate floor(timeRaw/64)+tcOffset). If none
+  // matches (saturated or invalid sample), the estimate itself is used (T3, PTW = number of samples).
+  // timeRaw must be the firmware pulse time without the trigger time shift.
+  if( fNPulses == 0 ) return;
+  const UInt_t ip = fNPulses - 1;
+  fPulsePeakPedRatio[ip] = fPeakPedestalRatio;  // nominal: set by SetF250Params() for this readout
+  fPulseWinTrunc[ip] = -1;
+  fPulseWinSource[ip] = 0;
+  if( fNSA < 0 || fNSB < 0 || fNPedestalSamples <= 0 || fNSamples == 0 ) return;  // PTW unknown
+  const Int_t nS = Int_t(fNSamples);
+  const Int_t tcEst = timeRaw / 64 + tcOffset;
+  static constexpr Int_t kSearch = 3;
+  Long64_t P[fMaxNSamples + 1];
+  P[0] = 0;
+  for( Int_t k = 0; k < nS; ++k ) P[k + 1] = P[k] + fSample[k];
+  for( Int_t d = 0; d <= kSearch; ++d ) {
+    for( Int_t sgn : {+1, -1} ) {
+      if( d == 0 && sgn < 0 ) continue;
+      const Int_t tc = tcEst + sgn * d;
+      const Int_t lo = TMath::Max(tc - fNSB, 0), hi = TMath::Min(tc + fNSA - 1, nS - 1);
+      if( lo > hi ) continue;
+      if( P[hi + 1] - P[lo] == fPulseInt[ip] ) {
+        fPulsePeakPedRatio[ip] = 1.0 * (hi - lo + 1) / fNPedestalSamples;
+        fPulseWinTrunc[ip] = (lo != tc - fNSB || hi != tc + fNSA - 1) ? 1 : 0;
+        fPulseWinSource[ip] = 1;
+        return;
+      }
+    }
+  }
+  const Int_t lo = TMath::Max(tcEst - fNSB, 0), hi = TMath::Min(tcEst + fNSA - 1, nS - 1);
+  if( lo > hi ) return;
+  fPulsePeakPedRatio[ip] = 1.0 * (hi - lo + 1) / fNPedestalSamples;
+  fPulseWinTrunc[ip] = (lo != tcEst - fNSB || hi != tcEst + fNSA - 1) ? 1 : 0;
+  fPulseWinSource[ip] = 2;
 }
 
 void THcRawAdcHit::SetF250Params( Int_t NSA, Int_t NSB, Int_t NPED ) {

@@ -17,6 +17,7 @@ class THcTrigRawHit : public THcRawHit {
 
     void SetData(Int_t signal, Int_t data);
     void SetSample(Int_t signal, Int_t data);
+    void SetFwPulseWindow(Int_t signal, Int_t timeRaw, Int_t tcOffset);
     void SetDataTimePedestalPeak(
       Int_t signal, Int_t data, Int_t time, Int_t pedestal, Int_t peak
     );

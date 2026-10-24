@@ -77,6 +77,8 @@ protected:
   Int_t fNSA;
   Int_t fNSB;
   Int_t fNPED;
+  Int_t fFwWinMode;   // DB fadc_fw_window_mode: 0 = legacy firmware Nsub (default), 1 = per-pulse window (proposal 01)
+  Int_t fFwTCOffset;  // DB fadc_fw_tc_offset: delta in TC = floor(TimeRaw/64) + delta (default 0)
 
   Int_t fNTDCRef_miss;
   Int_t fNADCRef_miss;
